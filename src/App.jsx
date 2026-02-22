@@ -52,11 +52,7 @@ export default function PokemonDeckMaker() {
       if (supertype) qParts.push(`supertype:${supertype}`);
       const queryStr = qParts.length > 0 ? qParts.join(" ") : "name:*";
       const url = `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(queryStr)}&pageSize=20&page=${pg}&orderBy=-set.releaseDate`;
-      const res = await fetch(url, {
-  headers: {
-    "X-Api-Key": "ecf2ea4f-2bd3-456c-b4ff-3928a3f93825"
-  }
-});
+      const res = await fetch(url);
       const data = await res.json();
       if (pg === 1) setCards(data.data || []);
       else setCards(prev => [...prev, ...(data.data || [])]);
