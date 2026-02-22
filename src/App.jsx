@@ -304,7 +304,7 @@ export default function PokemonDeckMaker() {
                           boxShadow: isHovered ? "0 8px 24px rgba(0,0,0,0.6)" : "0 2px 8px rgba(0,0,0,0.3)",
                         }}>
                         <img
-                          src={card.images?.small}
+                          src={card.image ? `${card.image}/low.png` : ""}
                           alt={card.name}
                           style={{ width: "100%", display: "block" }}
                           loading="lazy"
@@ -408,7 +408,7 @@ export default function PokemonDeckMaker() {
                               onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.09)"}
                               onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
                             >
-                              <img src={card.images?.small} alt="" style={{ width: 32, height: 44, objectFit: "cover", borderRadius: 3 }} />
+                              <img src={card.image ? `${card.image}/low.png` : ""} alt="" style={{ width: 32, height: 44, objectFit: "cover", borderRadius: 3 }} />
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: 12, fontWeight: 600, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{card.name}</div>
                                 <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>
