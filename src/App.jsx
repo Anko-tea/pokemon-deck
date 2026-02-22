@@ -44,24 +44,25 @@ export default function PokemonDeckMaker() {
   };
 
   const fetchCards = useCallback(async (q, types, supertype, pg = 1) => {
-    setLoading(true);
-    try {
-      let qParts = [];
-      if (q) qParts.push(`name:${q}*`);
-      if (types.length > 0) qParts.push(`types:${types.join(" OR types:")}`);
-      if (supertype) qParts.push(`supertype:${supertype}`);
-      const queryStr = qParts.length > 0 ? qParts.join(" ") : "name:*";
-      const url = `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(queryStr)}&pageSize=20&page=${pg}&orderBy=-set.releaseDate`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if (pg === 1) setCards(data.data || []);
-      else setCards(prev => [...prev, ...(data.data || [])]);
-      setTotalCount(data.totalCount || 0);
-    } catch (e) {
-      showNotif("通信エラーが発生しました", "error");
-    }
-    setLoading(false);
-  }, []);
+  setLoading(true);
+  try {
+    let url = `https://api.tcgdex.net/v2/en/cards?page=${pg}&itemsPerPage=20`;
+    if (q) url += `&name=${encodeURIComponent(q)}`;
+    if (supertype) url += `&category=${encodeURIComponent(supertype)}`;
+    if (types.length > 0) url += `&types=${encodeURIComponent(types[0])}`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const cards = Array.isArray(data) ? data : [];
+    if (pg === 1) setCards(cards);
+    else setCards(prev => [...prev, ...cards]);
+    setTotalCount(cards.length === 20 ? pg * 20 + 1 : pg * 20);
+  } catch (e) {
+    showNotif("通信エラーが発生しました", "error");
+  }
+  setLoading(false);
+}, []);
 
   useEffect(() => {
     fetchCards("", [], "", 1);
