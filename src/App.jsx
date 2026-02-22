@@ -46,32 +46,18 @@ export default function PokemonDeckMaker() {
   const fetchCards = useCallback(async (q, types, supertype, pg = 1) => {
   setLoading(true);
   try {
-    // まず最新セットの一覧を取得
-    const setsRes = await fetch("https://api.tcgdex.net/v2/en/sets");
-    const sets = await setsRes.json();
-
-    // 最新セットからカードを取得
-    const recentSets = sets.slice(-3);
-    let allCards = [];
-
-    for (const set of recentSets) {
-      const cardsRes = await fetch(`https://api.tcgdex.net/v2/en/sets/${set.id}/cards`);
-      const cards = await cardsRes.json();
-      if (Array.isArray(cards)) {
-        const withImages = cards.map(card => ({
-          ...card,
-          setId: set.id,
-          image: `https://assets.tcgdex.net/en/${set.id}/${card.localId}/low.webp`,
-        }));
-        allCards = [...allCards, ...withImages];
-      }
-    }
-
-    // 名前で絞り込み
-    if (q) allCards = allCards.filter(c => c.name?.toLowerCase().includes(q.toLowerCase()));
-
-    setTotalCount(allCards.length);
-    setCards(allCards.slice(0, 20 * pg));
+    let qParts = [];
+    if (q) qParts.push(`name:${q}*`);
+    if (types.length > 0) qParts.push(`types:${types.join(" OR types:")}`);
+    if (supertype) qParts.push(`supertype:${supertype}`);
+    const queryStr = qParts.length > 0 ? qParts.join(" ") : "name:*";
+    const apiUrl = `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(queryStr)}&pageSize=20&page=${pg}&orderBy=-set.releaseDate`;
+    const url = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (pg === 1) setCards(data.data || []);
+    else setCards(prev => [...prev, ...(data.data || [])]);
+    setTotalCount(data.totalCount || 0);
   } catch (e) {
     showNotif("通信エラーが発生しました", "error");
   }
@@ -153,15 +139,15 @@ export default function PokemonDeckMaker() {
     return acc;
   }, {});
 
-  const saveDeck = async () => {
-    try {
-      const deckData = { name: deckName, cards: deck, savedAt: new Date().toISOString() };
-      await window.storage.set(`deck:${deckName}`, JSON.stringify(deckData));
-      showNotif("デッキを保存しました！", "success");
-    } catch (e) {
-      showNotif("保存に失敗しました", "error");
-    }
-  };
+  const saveDeck = () => {
+  try {
+    const deckData = { name: deckName, cards: deck, savedAt: new Date().toISOString() };
+    localStorage.setItem(`deck:${deckName}`, JSON.stringify(deckData));
+    showNotif("デッキを保存しました！", "success");
+  } catch (e) {
+    showNotif("保存に失敗しました", "error");
+  }
+};
 
   const exportDeck = () => {
     const lines = deck.map(({ card, count }) =>
@@ -318,7 +304,7 @@ export default function PokemonDeckMaker() {
                           boxShadow: isHovered ? "0 8px 24px rgba(0,0,0,0.6)" : "0 2px 8px rgba(0,0,0,0.3)",
                         }}>
                         <img
-                          src={card.image || ""}
+                          src={card.images?.small}
                           alt={card.name}
                           style={{ width: "100%", display: "block" }}
                           loading="lazy"
@@ -422,7 +408,7 @@ export default function PokemonDeckMaker() {
                               onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.09)"}
                               onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
                             >
-                              <img src={card.image || ""} alt="" style={{ width: 32, height: 44, objectFit: "cover", borderRadius: 3 }} />
+                              <img src={card.images?.small} alt="" style={{ width: 32, height: 44, objectFit: "cover", borderRadius: 3 }} />
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: 12, fontWeight: 600, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{card.name}</div>
                                 <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>
