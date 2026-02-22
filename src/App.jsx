@@ -46,18 +46,32 @@ export default function PokemonDeckMaker() {
   const fetchCards = useCallback(async (q, types, supertype, pg = 1) => {
   setLoading(true);
   try {
-    let url = `https://api.tcgdex.net/v2/en/cards?page=${pg}&itemsPerPage=20`;
-    if (q) url += `&name=${encodeURIComponent(q)}`;
-    if (supertype) url += `&category=${encodeURIComponent(supertype)}`;
-    if (types.length > 0) url += `&types=${encodeURIComponent(types[0])}`;
+    // まず最新セットの一覧を取得
+    const setsRes = await fetch("https://api.tcgdex.net/v2/en/sets");
+    const sets = await setsRes.json();
 
-    const res = await fetch(url);
-    const data = await res.json();
+    // 最新セットからカードを取得
+    const recentSets = sets.slice(-3);
+    let allCards = [];
 
-    const cards = Array.isArray(data) ? data : [];
-    if (pg === 1) setCards(cards);
-    else setCards(prev => [...prev, ...cards]);
-    setTotalCount(cards.length === 20 ? pg * 20 + 1 : pg * 20);
+    for (const set of recentSets) {
+      const cardsRes = await fetch(`https://api.tcgdex.net/v2/en/sets/${set.id}/cards`);
+      const cards = await cardsRes.json();
+      if (Array.isArray(cards)) {
+        const withImages = cards.map(card => ({
+          ...card,
+          setId: set.id,
+          image: `https://assets.tcgdex.net/en/${set.id}/${card.localId}/low.webp`,
+        }));
+        allCards = [...allCards, ...withImages];
+      }
+    }
+
+    // 名前で絞り込み
+    if (q) allCards = allCards.filter(c => c.name?.toLowerCase().includes(q.toLowerCase()));
+
+    setTotalCount(allCards.length);
+    setCards(allCards.slice(0, 20 * pg));
   } catch (e) {
     showNotif("通信エラーが発生しました", "error");
   }
@@ -304,7 +318,7 @@ export default function PokemonDeckMaker() {
                           boxShadow: isHovered ? "0 8px 24px rgba(0,0,0,0.6)" : "0 2px 8px rgba(0,0,0,0.3)",
                         }}>
                         <img
-                          src={card.image ? `${card.image}/low.png` : ""}
+                          src={card.image || ""}
                           alt={card.name}
                           style={{ width: "100%", display: "block" }}
                           loading="lazy"
@@ -408,7 +422,7 @@ export default function PokemonDeckMaker() {
                               onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.09)"}
                               onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
                             >
-                              <img src={card.image ? `${card.image}/low.png` : ""} alt="" style={{ width: 32, height: 44, objectFit: "cover", borderRadius: 3 }} />
+                              <img src={card.image || ""} alt="" style={{ width: 32, height: 44, objectFit: "cover", borderRadius: 3 }} />
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: 12, fontWeight: 600, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{card.name}</div>
                                 <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>
